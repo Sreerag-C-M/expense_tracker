@@ -8,7 +8,7 @@ void main() {
   Get.put(GraphQLService());
   runApp(
     GetMaterialApp(
-      title: 'Expense Tracker',
+      title: 'My Expense Tracker',
       initialRoute: AppPages.INITIAL,
       getPages: AppPages.routes,
       theme: AppTheme.lightTheme,
