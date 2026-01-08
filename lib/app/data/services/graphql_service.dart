@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../../core/utils/api_constants.dart';
 
 class GraphQLService extends GetxService {
@@ -8,7 +9,10 @@ class GraphQLService extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    final HttpLink httpLink = HttpLink(ApiConstants.baseUrl);
+    final HttpLink httpLink = HttpLink(
+      ApiConstants.baseUrl,
+      httpClient: TimeoutClient(),
+    );
 
     client = GraphQLClient(
       link: httpLink,
@@ -51,5 +55,27 @@ class GraphQLService extends GetxService {
     }
 
     return result;
+  }
+}
+
+class TimeoutClient extends http.BaseClient {
+  final http.Client _inner = http.Client();
+  final Duration timeout;
+
+  TimeoutClient({this.timeout = const Duration(seconds: 60)});
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    print('TimeoutClient: Sending request to ${request.url}');
+    try {
+      final response = await _inner.send(request).timeout(timeout);
+      print(
+        'TimeoutClient: Response received with status ${response.statusCode}',
+      );
+      return response;
+    } catch (e) {
+      print('TimeoutClient: Error sending request: $e');
+      rethrow;
+    }
   }
 }

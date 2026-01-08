@@ -12,7 +12,11 @@ class AddIncomeView extends GetView<AddIncomeController> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Add Income'),
+        title: Obx(
+          () => Text(
+            controller.editId.value == null ? 'Add Income' : 'Edit Income',
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -187,9 +191,11 @@ class AddIncomeView extends GetView<AddIncomeController> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
-                              'Save Income',
-                              style: TextStyle(
+                          : Text(
+                              controller.editId.value == null
+                                  ? 'Save Income'
+                                  : 'Update Income',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),

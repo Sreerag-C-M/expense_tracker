@@ -126,4 +126,30 @@ class GqlQueries {
       }
     }
   ''';
+  static const String updateIncome = r'''
+    mutation UpdateIncome($id: ID!, $amount: Float, $source: String, $date: String, $isRecurring: Boolean) {
+      updateIncome(id: $id, amount: $amount, source: $source, date: $date, isRecurring: $isRecurring) {
+        id
+      }
+    }
+  ''';
+
+  static const String updateUpcomingPayment = r'''
+    mutation UpdateUpcomingPayment($id: ID!, $title: String, $amount: Float, $dueDate: String, $frequency: String) {
+      updateUpcomingPayment(id: $id, title: $title, amount: $amount, dueDate: $dueDate, frequency: $frequency) {
+        id
+      }
+    }
+  ''';
+  static const String getIncomes = r'''
+    query {
+      incomes {
+        id
+        amount
+        source
+        date
+        isRecurring
+      }
+    }
+  ''';
 }

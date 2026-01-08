@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/providers/income_provider.dart';
+import '../dashboard/dashboard_controller.dart';
 
 class AddIncomeController extends GetxController {
   final IncomeProvider _provider = IncomeProvider();
@@ -26,6 +27,31 @@ class AddIncomeController extends GetxController {
     if (picked != null) selectedDate.value = picked;
   }
 
+  final Rx<String?> editId = Rx<String?>(null);
+
+  @override
+  void onInit() {
+    super.onInit();
+    final args = Get.arguments;
+    if (args != null && args is Map<String, dynamic>) {
+      editId.value = args['_id'] ?? args['id'];
+      amountController.text = args['amount'].toString();
+      sourceController.text = args['source'] ?? '';
+
+      try {
+        if (int.tryParse(args['date'].toString()) != null) {
+          selectedDate.value = DateTime.fromMillisecondsSinceEpoch(
+            int.parse(args['date'].toString()),
+          );
+        } else {
+          selectedDate.value = DateTime.parse(args['date']);
+        }
+      } catch (_) {}
+
+      isRecurring.value = args['isRecurring'] ?? false;
+    }
+  }
+
   void saveIncome() async {
     if (!formKey.currentState!.validate()) return;
 
@@ -39,18 +65,33 @@ class AddIncomeController extends GetxController {
         if (isRecurring.value) 'recurrence': recurrenceType.value,
       };
 
-      await _provider.createIncome(data);
+      if (editId.value != null) {
+        await _provider.updateIncome(editId.value!, data);
+        Get.snackbar(
+          'Success',
+          'Income updated successfully',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        await _provider.createIncome(data);
+        Get.snackbar(
+          'Success',
+          'Income added successfully',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      }
+
+      if (Get.isRegistered<DashboardController>()) {
+        Get.find<DashboardController>().fetchDashboardData();
+      }
+
       Get.back(result: true);
-      Get.snackbar(
-        'Success',
-        'Income added successfully',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
     } catch (e) {
       Get.snackbar(
         'Error',
-        'Failed to add income: $e',
+        'Failed to save income: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

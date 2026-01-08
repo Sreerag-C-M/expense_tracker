@@ -5,6 +5,7 @@ import 'package:test_application/app/routes/app_routes.dart';
 import 'widgets/trend_line_chart.dart';
 import 'package:test_application/app/core/widgets/glass_container.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class DashboardView extends GetView<DashboardController> {
   const DashboardView({Key? key}) : super(key: key);
@@ -135,6 +136,8 @@ class DashboardView extends GetView<DashboardController> {
                           ),
                           const SizedBox(height: 16),
                           _buildTopCategoriesList(context),
+                          const SizedBox(height: 24),
+                          _buildRecentTransactions(context),
                           const SizedBox(height: 100), // Bottom padding
                         ],
                       ),
@@ -436,7 +439,7 @@ class DashboardView extends GetView<DashboardController> {
                   ),
                   child: Center(
                     child: Text(
-                      cat['_id'].toString().substring(0, 1),
+                      cat['category'].toString().substring(0, 1),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                         fontSize: 20,
@@ -451,7 +454,7 @@ class DashboardView extends GetView<DashboardController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        cat['_id'],
+                        cat['category'],
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -478,6 +481,100 @@ class DashboardView extends GetView<DashboardController> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildRecentTransactions(BuildContext context) {
+    if (controller.recentExpenses.isEmpty) return const SizedBox();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, "Recent Transactions"),
+        const SizedBox(height: 16),
+        ...controller.recentExpenses.take(5).map((t) {
+          final isIncome = t['_type'] == 'income';
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InkWell(
+              onTap: () => Get.toNamed(
+                isIncome ? Routes.ADD_INCOME : Routes.ADD_EXPENSE,
+                arguments: t,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              child: GlassContainer(
+                padding: const EdgeInsets.all(16),
+                opacity: 0.5,
+                borderRadius: 20,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: (isIncome ? Colors.green : Colors.red)
+                            .withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isIncome
+                            ? Icons.arrow_downward
+                            : Icons.shopping_bag_outlined,
+                        color: isIncome ? Colors.green : Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isIncome
+                                ? t['source']
+                                : (t['description'] ?? t['category']),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            t['date'] != null
+                                ? DateFormat.MMMd().format(
+                                    int.tryParse(t['date'].toString()) != null
+                                        ? DateTime.fromMillisecondsSinceEpoch(
+                                            int.parse(t['date'].toString()),
+                                          )
+                                        : DateTime.parse(t['date']),
+                                  )
+                                : '',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          "${isIncome ? '+' : '-'}₹${t['amount']}",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: isIncome ? Colors.green : Colors.redAccent,
+                          ),
+                        ),
+                        const Icon(Icons.edit, size: 14, color: Colors.grey),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ],
     );
   }
 }

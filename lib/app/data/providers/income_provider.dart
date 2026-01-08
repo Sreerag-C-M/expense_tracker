@@ -16,4 +16,17 @@ class IncomeProvider {
       );
     }
   }
+
+  Future<void> updateIncome(String id, Map<String, dynamic> data) async {
+    final variables = {'id': id, ...data};
+    final result = await _gqlService.performMutation(
+      GqlQueries.updateIncome,
+      variables: variables,
+    );
+    if (result.hasException) {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to update income',
+      );
+    }
+  }
 }

@@ -16,4 +16,26 @@ class DashboardProvider {
       );
     }
   }
+
+  Future<List<dynamic>> getExpenses() async {
+    final result = await _gqlService.performQuery(GqlQueries.getExpenses);
+
+    if (!result.hasException && result.data != null) {
+      return result.data!['expenses'];
+    } else {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to load expenses',
+      );
+    }
+  }
+
+  Future<List<dynamic>> getIncomes() async {
+    final result = await _gqlService.performQuery(GqlQueries.getIncomes);
+
+    if (!result.hasException && result.data != null) {
+      return result.data!['incomes'];
+    } else {
+      throw Exception(result.exception?.toString() ?? 'Failed to load incomes');
+    }
+  }
 }

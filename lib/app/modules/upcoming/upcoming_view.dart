@@ -18,7 +18,10 @@ class UpcomingView extends GetView<UpcomingController> {
         surfaceTintColor: Colors.transparent,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddDialog(context),
+        onPressed: () {
+          controller.setEditMode(null);
+          _showAddDialog(context);
+        },
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -108,7 +111,7 @@ class UpcomingView extends GetView<UpcomingController> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Due: ${DateFormat.yMMMd().format(DateTime.parse(payment['dueDate']))}',
+                                'Due: ${DateFormat.yMMMd().format(int.tryParse(payment['dueDate'].toString()) != null ? DateTime.fromMillisecondsSinceEpoch(int.parse(payment['dueDate'].toString())) : DateTime.parse(payment['dueDate']))}',
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 13,
@@ -135,14 +138,30 @@ class UpcomingView extends GetView<UpcomingController> {
                                 fontSize: 16,
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                color: Colors.red,
-                                size: 20,
-                              ),
-                              onPressed: () =>
-                                  controller.deletePayment(payment['_id']),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit_outlined,
+                                    color: Colors.blue,
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    controller.setEditMode(payment);
+                                    _showAddDialog(context);
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                  onPressed: () =>
+                                      controller.deletePayment(payment['id']),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -160,7 +179,9 @@ class UpcomingView extends GetView<UpcomingController> {
 
   void _showAddDialog(BuildContext context) {
     Get.defaultDialog(
-      title: "Add Upcoming Payment",
+      title: controller.editPaymentId.value == null
+          ? "Add Upcoming Payment"
+          : "Edit Payment",
       content: Column(
         children: [
           TextField(
@@ -209,9 +230,9 @@ class UpcomingView extends GetView<UpcomingController> {
           ),
         ],
       ),
-      textConfirm: "Add",
+      textConfirm: controller.editPaymentId.value == null ? "Add" : "Update",
       textCancel: "Cancel",
-      onConfirm: controller.addPayment,
+      onConfirm: controller.savePayment,
     );
   }
 }

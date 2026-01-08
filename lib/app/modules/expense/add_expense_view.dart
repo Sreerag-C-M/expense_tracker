@@ -12,7 +12,11 @@ class AddExpenseView extends GetView<AddExpenseController> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Add Expense'),
+        title: Obx(
+          () => Text(
+            controller.editId.value == null ? 'Add Expense' : 'Edit Expense',
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -254,8 +258,10 @@ class AddExpenseView extends GetView<AddExpenseController> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
-                              'Save Expense',
+                          : Text(
+                              controller.editId.value == null
+                                  ? 'Save Expense'
+                                  : 'Update Expense',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

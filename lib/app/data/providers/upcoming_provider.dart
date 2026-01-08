@@ -42,4 +42,21 @@ class UpcomingProvider {
       );
     }
   }
+
+  Future<void> updateUpcomingPayment(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    final variables = {'id': id, ...data};
+    final result = await _gqlService.performMutation(
+      GqlQueries
+          .updateUpcomingPayment, // Need to verify if this query exists in GqlQueries
+      variables: variables,
+    );
+    if (result.hasException) {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to update upcoming payment',
+      );
+    }
+  }
 }

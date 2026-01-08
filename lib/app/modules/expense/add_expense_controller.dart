@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/providers/expense_provider.dart';
+import '../dashboard/dashboard_controller.dart';
 
 class AddExpenseController extends GetxController {
   final ExpenseProvider _provider = ExpenseProvider();
@@ -41,6 +42,42 @@ class AddExpenseController extends GetxController {
     }
   }
 
+  final Rx<String?> editId = Rx<String?>(null);
+
+  @override
+  void onInit() {
+    super.onInit();
+    final args = Get.arguments;
+    if (args != null && args is Map<String, dynamic>) {
+      editId.value = args['_id'] ?? args['id'];
+      amountController.text = args['amount'].toString();
+      descriptionController.text = args['description'] ?? '';
+
+      // Category
+      if (defaultCategories.contains(args['category'])) {
+        selectedCategory.value = args['category'];
+      } else {
+        selectedCategory.value = 'Others';
+        customCategoryController.text = args['category'] ?? '';
+      }
+
+      // Date
+      try {
+        if (int.tryParse(args['date'].toString()) != null) {
+          selectedDate.value = DateTime.fromMillisecondsSinceEpoch(
+            int.parse(args['date'].toString()),
+          );
+        } else {
+          selectedDate.value = DateTime.parse(args['date']);
+        }
+      } catch (_) {}
+
+      paymentType.value = args['paymentType'] ?? 'cash';
+      isRecurring.value = args['isRecurring'] ?? false;
+      recurrenceType.value = args['recurrenceType'] ?? 'monthly';
+    }
+  }
+
   void saveExpense() async {
     if (!formKey.currentState!.validate()) return;
 
@@ -62,18 +99,35 @@ class AddExpenseController extends GetxController {
         'recurrenceType': isRecurring.value ? recurrenceType.value : null,
       };
 
-      await _provider.createExpense(expenseData);
-      Get.back(result: true); // Return true to refresh dashboard
-      Get.snackbar(
-        'Success',
-        'Expense added successfully',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      if (editId.value != null) {
+        await _provider.updateExpense(editId.value!, expenseData);
+        Get.snackbar(
+          'Success',
+          'Expense updated successfully',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        await _provider.createExpense(expenseData);
+        Get.snackbar(
+          'Success',
+          'Expense added successfully',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      }
+
+      // Refresh Dashboard
+      if (Get.isRegistered<DashboardController>()) {
+        Get.find<DashboardController>().fetchDashboardData();
+        // Trigger onReady or explicit fetch if needed, but fetchDashboardData calls getExpenses too now
+      }
+
+      Get.back(result: true);
     } catch (e) {
       Get.snackbar(
         'Error',
-        'Failed to add expense: $e',
+        'Failed to save expense: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

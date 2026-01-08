@@ -14,10 +14,17 @@ class DashboardController extends GetxController {
   final projectedBalance = 0.0.obs;
   final topCategories = <Map<String, dynamic>>[].obs;
   final monthlyTrend = <Map<String, dynamic>>[].obs;
+  final recentExpenses = <Map<String, dynamic>>[].obs;
 
   @override
   void onInit() {
     super.onInit();
+    // fetchDashboardData(); // Moved to onReady
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
     fetchDashboardData();
   }
 
@@ -39,40 +46,49 @@ class DashboardController extends GetxController {
         List<Map<String, dynamic>>.from(data['monthlyTrend']),
       );
 
+      final expenses = await _provider.getExpenses();
+      final incomes = await _provider.getIncomes();
+
+      final allTransactions = <Map<String, dynamic>>[];
+
+      for (var e in expenses) {
+        allTransactions.add({...e, '_type': 'expense'});
+      }
+      for (var i in incomes) {
+        allTransactions.add({...i, '_type': 'income'});
+      }
+
+      // Sort by date descending
+      allTransactions.sort((a, b) {
+        DateTime dA = DateTime.tryParse(a['date'].toString()) ?? DateTime.now();
+        if (int.tryParse(a['date'].toString()) != null) {
+          dA = DateTime.fromMillisecondsSinceEpoch(
+            int.parse(a['date'].toString()),
+          );
+        }
+        DateTime dB = DateTime.tryParse(b['date'].toString()) ?? DateTime.now();
+        if (int.tryParse(b['date'].toString()) != null) {
+          dB = DateTime.fromMillisecondsSinceEpoch(
+            int.parse(b['date'].toString()),
+          );
+        }
+        return dB.compareTo(dA);
+      });
+
+      recentExpenses.assignAll(allTransactions);
+
       isLoading.value = false;
     } catch (e) {
       isLoading.value = false;
       debugPrint('Error fetching dashboard: $e');
 
-      // DEMO MODE: Backend not found, showing mock data for UI preview
       Get.snackbar(
-        "Demo Mode",
-        "Backend not connected. Showing sample data.",
+        "Error",
+        "Failed to load dashboard data: $e",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.secondary,
-        colorText: Get.theme.colorScheme.onSecondary,
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Get.theme.colorScheme.onError,
       );
-
-      currentBalance.value = 2450.00;
-      thisMonthIncome.value = 5000.00;
-      thisMonthExpenses.value = 2550.00;
-      upcomingTotal.value = 450.00;
-      projectedBalance.value = 2000.00;
-
-      topCategories.assignAll([
-        {'_id': 'Rent', 'total': 1200},
-        {'_id': 'Food', 'total': 800},
-        {'_id': 'Transport', 'total': 350},
-      ]);
-
-      monthlyTrend.assignAll([
-        {'month': '2023-8', 'val': 2000},
-        {'month': '2023-9', 'val': 2400},
-        {'month': '2023-10', 'val': 1800},
-        {'month': '2023-11', 'val': 2550},
-        {'month': '2023-12', 'val': 2100},
-        {'month': '2024-1', 'val': 2550},
-      ]);
     }
   }
 }
