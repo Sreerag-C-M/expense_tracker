@@ -15,6 +15,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get('/', (req, res) => {
+    res.send('Expense Tracker API is running. Go to /graphql to use the API.');
+});
+
 app.use('/graphql', graphqlHTTP({
     schema,
     graphiql: true
