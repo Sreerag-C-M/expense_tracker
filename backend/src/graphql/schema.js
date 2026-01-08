@@ -131,11 +131,13 @@ const RootQuery = new GraphQLObjectType({
 
                 // 2. This Month Data
                 const thisMonthExpensesAgg = await Expense.aggregate([
-                    { $match: { date: { $gte: startOfMonth, $lte: endOfMonth } } },
+                    { $addFields: { convertedDate: { $toDate: "$date" } } },
+                    { $match: { convertedDate: { $gte: startOfMonth, $lte: endOfMonth } } },
                     { $group: { _id: null, total: { $sum: '$amount' } } }
                 ]);
                 const thisMonthIncomeAgg = await Income.aggregate([
-                    { $match: { date: { $gte: startOfMonth, $lte: endOfMonth } } },
+                    { $addFields: { convertedDate: { $toDate: "$date" } } },
+                    { $match: { convertedDate: { $gte: startOfMonth, $lte: endOfMonth } } },
                     { $group: { _id: null, total: { $sum: '$amount' } } }
                 ]);
                 const thisMonthExpenses = thisMonthExpensesAgg.length > 0 ? thisMonthExpensesAgg[0].total : 0;
@@ -157,7 +159,8 @@ const RootQuery = new GraphQLObjectType({
 
                 // 5. Category-wise expense chart
                 const categoryExpenses = await Expense.aggregate([
-                    { $match: { date: { $gte: startOfMonth, $lte: endOfMonth } } },
+                    { $addFields: { convertedDate: { $toDate: "$date" } } },
+                    { $match: { convertedDate: { $gte: startOfMonth, $lte: endOfMonth } } },
                     { $group: { _id: '$category', total: { $sum: '$amount' } } },
                     { $sort: { total: -1 } }
                 ]);
@@ -166,16 +169,19 @@ const RootQuery = new GraphQLObjectType({
                 const sixMonthsAgo = new Date();
                 sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
                 sixMonthsAgo.setDate(1);
+
                 const monthlyTrend = await Expense.aggregate([
-                    { $match: { date: { $gte: sixMonthsAgo } } },
+                    { $addFields: { convertedDate: { $toDate: "$date" } } },
+                    { $match: { convertedDate: { $gte: sixMonthsAgo } } },
                     {
                         $group: {
-                            _id: { month: { $month: '$date' }, year: { $year: '$date' } },
+                            _id: { month: { $month: '$convertedDate' }, year: { $year: '$convertedDate' } },
                             total: { $sum: '$amount' }
                         }
                     },
                     { $sort: { '_id.year': 1, '_id.month': 1 } }
                 ]);
+
                 const formattedTrend = monthlyTrend.map(item => ({
                     month: `${item._id.year}-${item._id.month}`,
                     val: item.total
