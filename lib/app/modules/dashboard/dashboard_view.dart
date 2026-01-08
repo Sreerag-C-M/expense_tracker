@@ -296,28 +296,36 @@ class DashboardView extends GetView<DashboardController> {
           Icons.arrow_outward,
           "Expense",
           Colors.orange,
-          () => Get.toNamed(Routes.ADD_EXPENSE),
+          () => Get.toNamed(
+            Routes.ADD_EXPENSE,
+          )?.then((_) => controller.fetchDashboardData(isRefresh: true)),
         ),
         _buildActionButton(
           context,
           Icons.arrow_downward,
           "Income",
           Colors.green,
-          () => Get.toNamed(Routes.ADD_INCOME),
+          () => Get.toNamed(
+            Routes.ADD_INCOME,
+          )?.then((_) => controller.fetchDashboardData(isRefresh: true)),
         ),
         _buildActionButton(
           context,
           Icons.calendar_month,
           "Bills",
           Colors.blue,
-          () => Get.toNamed(Routes.UPCOMING),
+          () => Get.toNamed(
+            Routes.UPCOMING,
+          )?.then((_) => controller.fetchDashboardData(isRefresh: true)),
         ),
         _buildActionButton(
           context,
           Icons.pie_chart,
           "Budget",
           Colors.purple,
-          () => Get.toNamed(Routes.CATEGORIES),
+          () => Get.toNamed(
+            Routes.CATEGORIES,
+          )?.then((_) => controller.fetchDashboardData(isRefresh: true)),
         ),
       ],
     );
@@ -520,7 +528,7 @@ class DashboardView extends GetView<DashboardController> {
               onTap: () => Get.toNamed(
                 isIncome ? Routes.ADD_INCOME : Routes.ADD_EXPENSE,
                 arguments: t,
-              ),
+              )?.then((_) => controller.fetchDashboardData(isRefresh: true)),
               borderRadius: BorderRadius.circular(20),
               child: GlassContainer(
                 padding: const EdgeInsets.all(16),
