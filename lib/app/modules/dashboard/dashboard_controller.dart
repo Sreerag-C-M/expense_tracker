@@ -32,34 +32,107 @@ class DashboardController extends GetxController {
     if (!isRefresh) {
       isLoading.value = true;
     }
-    isError.value = false; // Reset error state
+    isError.value = false;
     try {
-      final data = await _provider.getDashboardData();
+      // 1. Fetch raw data in parallel
+      final results = await Future.wait([
+        _provider.getExpenses(),
+        _provider.getIncomes(),
+        _provider.getUpcomingPayments(),
+      ]);
 
-      currentBalance.value = (data['currentBalance'] as num).toDouble();
-      thisMonthIncome.value = (data['thisMonthIncome'] as num).toDouble();
-      thisMonthExpenses.value = (data['thisMonthExpenses'] as num).toDouble();
-      upcomingTotal.value = (data['upcomingTotal'] as num).toDouble();
-      projectedBalance.value = (data['projectedBalance'] as num).toDouble();
+      final expenses = results[0] as List<dynamic>;
+      final incomes = results[1] as List<dynamic>;
+      final upcoming = results[2] as List<dynamic>;
 
-      topCategories.assignAll(
-        List<Map<String, dynamic>>.from(data['topCategories']),
-      );
-      // monthlyTrend is now calculated client-side below
+      // 2. Calculate Totals (Client-Side)
+      double totalExpenses = 0.0;
+      double totalIncome = 0.0;
+      double calcThisMonthExpenses = 0.0;
+      double calcThisMonthIncome = 0.0;
+      double calcUpcomingTotal = 0.0;
 
-      final expenses = await _provider.getExpenses();
-      final incomes = await _provider.getIncomes();
-
-      final allTransactions = <Map<String, dynamic>>[];
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0);
 
       for (var e in expenses) {
-        allTransactions.add({...e, '_type': 'expense'});
-      }
-      for (var i in incomes) {
-        allTransactions.add({...i, '_type': 'income'});
+        double amount = (double.tryParse(e['amount'].toString()) ?? 0.0);
+        totalExpenses += amount;
+
+        DateTime? date = int.tryParse(e['date'].toString()) != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+                int.parse(e['date'].toString()),
+              )
+            : DateTime.tryParse(e['date'].toString());
+
+        if (date != null &&
+            date.isAfter(startOfMonth.subtract(const Duration(seconds: 1))) &&
+            date.isBefore(endOfMonth.add(const Duration(seconds: 1)))) {
+          calcThisMonthExpenses += amount;
+        }
       }
 
-      // Sort by date descending
+      for (var i in incomes) {
+        double amount = (double.tryParse(i['amount'].toString()) ?? 0.0);
+        totalIncome += amount;
+
+        DateTime? date = int.tryParse(i['date'].toString()) != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+                int.parse(i['date'].toString()),
+              )
+            : DateTime.tryParse(i['date'].toString());
+
+        if (date != null &&
+            date.isAfter(startOfMonth.subtract(const Duration(seconds: 1))) &&
+            date.isBefore(endOfMonth.add(const Duration(seconds: 1)))) {
+          calcThisMonthIncome += amount;
+        }
+      }
+
+      for (var u in upcoming) {
+        calcUpcomingTotal += (double.tryParse(u['amount'].toString()) ?? 0.0);
+      }
+
+      // 3. Update Observables
+      currentBalance.value = totalIncome - totalExpenses;
+      thisMonthIncome.value = calcThisMonthIncome;
+      thisMonthExpenses.value = calcThisMonthExpenses;
+      upcomingTotal.value = calcUpcomingTotal;
+      projectedBalance.value = currentBalance.value - upcomingTotal.value;
+
+      // 4. Top Categories (Client-Side)
+      final Map<String, double> categoryMap = {};
+      for (var e in expenses) {
+        DateTime? date = int.tryParse(e['date'].toString()) != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+                int.parse(e['date'].toString()),
+              )
+            : DateTime.tryParse(e['date'].toString());
+
+        // Filter for this month for top categories
+        if (date != null &&
+            date.isAfter(startOfMonth.subtract(const Duration(seconds: 1))) &&
+            date.isBefore(endOfMonth.add(const Duration(seconds: 1)))) {
+          String cat = e['category'] ?? 'Other';
+          double amount = (double.tryParse(e['amount'].toString()) ?? 0.0);
+          categoryMap[cat] = (categoryMap[cat] ?? 0) + amount;
+        }
+      }
+
+      final sortedCategories = categoryMap.entries
+          .map((e) => {'category': e.key, 'total': e.value})
+          .toList();
+      sortedCategories.sort(
+        (a, b) => (b['total'] as double).compareTo(a['total'] as double),
+      );
+      topCategories.assignAll(sortedCategories.take(3).toList());
+
+      // 5. Recent Transactions
+      final allTransactions = <Map<String, dynamic>>[];
+      for (var e in expenses) allTransactions.add({...e, '_type': 'expense'});
+      for (var i in incomes) allTransactions.add({...i, '_type': 'income'});
+
       allTransactions.sort((a, b) {
         DateTime dA = DateTime.tryParse(a['date'].toString()) ?? DateTime.now();
         if (int.tryParse(a['date'].toString()) != null) {
@@ -75,13 +148,11 @@ class DashboardController extends GetxController {
         }
         return dB.compareTo(dA);
       });
-
       recentExpenses.assignAll(allTransactions);
 
-      // --- Client-side Monthly Trend Calculation ---
+      // 6. Monthly Trend (Client-Side)
       final Map<String, double> trendMap = {};
-      final now = DateTime.now();
-      // Initialize with last 6 months (including current)
+      // Initialize last 6 months
       for (int i = 5; i >= 0; i--) {
         final d = DateTime(now.year, now.month - i, 1);
         final key = "${d.year}-${d.month.toString().padLeft(2, '0')}";
@@ -89,14 +160,11 @@ class DashboardController extends GetxController {
       }
 
       for (var e in expenses) {
-        DateTime? date;
-        if (int.tryParse(e['date'].toString()) != null) {
-          date = DateTime.fromMillisecondsSinceEpoch(
-            int.parse(e['date'].toString()),
-          );
-        } else {
-          date = DateTime.tryParse(e['date'].toString());
-        }
+        DateTime? date = int.tryParse(e['date'].toString()) != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+                int.parse(e['date'].toString()),
+              )
+            : DateTime.tryParse(e['date'].toString());
 
         if (date != null) {
           final key = "${date.year}-${date.month.toString().padLeft(2, '0')}";
@@ -111,14 +179,10 @@ class DashboardController extends GetxController {
       final generatedTrend = trendMap.entries.map((entry) {
         return {'month': entry.key, 'val': entry.value};
       }).toList();
-
-      // Sort by month string (YYYY-MM)
       generatedTrend.sort(
         (a, b) => (a['month'] as String).compareTo(b['month'] as String),
       );
-
       monthlyTrend.assignAll(generatedTrend);
-      // ---------------------------------------------
 
       isLoading.value = false;
     } catch (e) {

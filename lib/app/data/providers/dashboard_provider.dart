@@ -38,4 +38,18 @@ class DashboardProvider {
       throw Exception(result.exception?.toString() ?? 'Failed to load incomes');
     }
   }
+
+  Future<List<dynamic>> getUpcomingPayments() async {
+    final result = await _gqlService.performQuery(
+      GqlQueries.getUpcomingPayments,
+    );
+
+    if (!result.hasException && result.data != null) {
+      return result.data!['upcomingPayments'];
+    } else {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to load upcoming payments',
+      );
+    }
+  }
 }
