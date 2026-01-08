@@ -174,7 +174,7 @@ class DashboardView extends GetView<DashboardController> {
 
   Widget _buildGlassBalanceCard(BuildContext context) {
     return GlassContainer(
-      height: 220,
+      // height: 220, // REMOVED: Fixed height caused overflow
       width: double.infinity,
       borderRadius: 32,
       opacity: 0.15,
@@ -192,34 +192,42 @@ class DashboardView extends GetView<DashboardController> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.spa, color: Colors.white, size: 16),
-                          SizedBox(width: 6),
-                          Text(
-                            "Smart Balance",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.spa, color: Colors.white, size: 16),
+                            SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                "Smart Balance",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     const Icon(Icons.more_horiz, color: Colors.white70),
                   ],
                 ),
-
+                const SizedBox(
+                  height: 24,
+                ), // Added explicit spacing instead of mainAxisAlignment spaceBetween relying on height
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -242,7 +250,7 @@ class DashboardView extends GetView<DashboardController> {
                     ),
                   ],
                 ),
-
+                const SizedBox(height: 24), // Added explicit spacing
                 Row(
                   children: [
                     _buildSmallInfo(
@@ -395,10 +403,10 @@ class DashboardView extends GetView<DashboardController> {
     IconData icon,
   ) {
     return GlassContainer(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16), // Reduced padding to prevent overflow
       borderRadius: 24,
       color: Theme.of(context).cardColor,
-      opacity: 0.6, // More opaque for readability
+      opacity: 0.6,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -412,23 +420,30 @@ class DashboardView extends GetView<DashboardController> {
                 ),
                 child: Icon(icon, size: 16, color: color),
               ),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+              const SizedBox(width: 8), // Reduced spacing
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            '₹${amount.toStringAsFixed(0)}',
-            style: GoogleFonts.outfit(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '₹${amount.toStringAsFixed(0)}',
+              style: GoogleFonts.outfit(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],

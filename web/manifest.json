@@ -1,6 +1,6 @@
 {
-    "name": "test_application",
-    "short_name": "test_application",
+    "name": "My Expense Tracker",
+    "short_name": "My Expense Tracker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",

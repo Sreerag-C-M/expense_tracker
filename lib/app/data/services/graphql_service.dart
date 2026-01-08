@@ -9,7 +9,10 @@ class GraphQLService extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    final HttpLink httpLink = HttpLink(ApiConstants.baseUrl);
+    final HttpLink httpLink = HttpLink(
+      ApiConstants.baseUrl,
+      httpClient: TimeoutClient(timeout: const Duration(seconds: 30)),
+    );
 
     client = GraphQLClient(
       link: httpLink,
