@@ -69,7 +69,9 @@ class DashboardView extends GetView<DashboardController> {
             }
 
             return RefreshIndicator(
-              onRefresh: () async => controller.fetchDashboardData(),
+              onRefresh: () async {
+                await controller.fetchDashboardData(isRefresh: true);
+              },
               child: CustomScrollView(
                 slivers: [
                   SliverAppBar(
@@ -84,6 +86,24 @@ class DashboardView extends GetView<DashboardController> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     actions: [
+                      IconButton(
+                        onPressed: () => controller.fetchDashboardData(),
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.refresh,
+                            size: 20,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       GlassContainer(
                         padding: const EdgeInsets.all(8),
                         borderRadius: 12,

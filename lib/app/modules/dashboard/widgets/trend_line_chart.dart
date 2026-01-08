@@ -40,7 +40,7 @@ class TrendLineChart extends StatelessWidget {
               spots: data.asMap().entries.map((e) {
                 return FlSpot(
                   e.key.toDouble(),
-                  (e.value['val'] as num).toDouble(),
+                  (e.value['val'] as num? ?? 0).toDouble(),
                 );
               }).toList(),
               isCurved: true,

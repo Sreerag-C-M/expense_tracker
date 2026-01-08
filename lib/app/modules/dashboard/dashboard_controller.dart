@@ -4,6 +4,7 @@ import '../../data/providers/dashboard_provider.dart';
 
 class DashboardController extends GetxController {
   final isLoading = true.obs;
+  final isError = false.obs;
   final DashboardProvider _provider = DashboardProvider();
 
   // Data Observables
@@ -19,7 +20,6 @@ class DashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // fetchDashboardData(); // Moved to onReady
   }
 
   @override
@@ -28,8 +28,11 @@ class DashboardController extends GetxController {
     fetchDashboardData();
   }
 
-  void fetchDashboardData() async {
-    isLoading.value = true;
+  Future<void> fetchDashboardData({bool isRefresh = false}) async {
+    if (!isRefresh) {
+      isLoading.value = true;
+    }
+    isError.value = false; // Reset error state
     try {
       final data = await _provider.getDashboardData();
 
@@ -42,9 +45,7 @@ class DashboardController extends GetxController {
       topCategories.assignAll(
         List<Map<String, dynamic>>.from(data['topCategories']),
       );
-      monthlyTrend.assignAll(
-        List<Map<String, dynamic>>.from(data['monthlyTrend']),
-      );
+      // monthlyTrend is now calculated client-side below
 
       final expenses = await _provider.getExpenses();
       final incomes = await _provider.getIncomes();
@@ -77,14 +78,61 @@ class DashboardController extends GetxController {
 
       recentExpenses.assignAll(allTransactions);
 
+      // --- Client-side Monthly Trend Calculation ---
+      final Map<String, double> trendMap = {};
+      final now = DateTime.now();
+      // Initialize with last 6 months (including current)
+      for (int i = 5; i >= 0; i--) {
+        final d = DateTime(now.year, now.month - i, 1);
+        final key = "${d.year}-${d.month.toString().padLeft(2, '0')}";
+        trendMap[key] = 0.0;
+      }
+
+      for (var e in expenses) {
+        DateTime? date;
+        if (int.tryParse(e['date'].toString()) != null) {
+          date = DateTime.fromMillisecondsSinceEpoch(
+            int.parse(e['date'].toString()),
+          );
+        } else {
+          date = DateTime.tryParse(e['date'].toString());
+        }
+
+        if (date != null) {
+          final key = "${date.year}-${date.month.toString().padLeft(2, '0')}";
+          if (trendMap.containsKey(key)) {
+            trendMap[key] =
+                (trendMap[key] ?? 0) +
+                (double.tryParse(e['amount'].toString()) ?? 0.0);
+          }
+        }
+      }
+
+      final generatedTrend = trendMap.entries.map((entry) {
+        return {'month': entry.key, 'val': entry.value};
+      }).toList();
+
+      // Sort by month string (YYYY-MM)
+      generatedTrend.sort(
+        (a, b) => (a['month'] as String).compareTo(b['month'] as String),
+      );
+
+      monthlyTrend.assignAll(generatedTrend);
+      // ---------------------------------------------
+
       isLoading.value = false;
     } catch (e) {
       isLoading.value = false;
       debugPrint('Error fetching dashboard: $e');
 
+      String errorMessage = e.toString();
+      if (errorMessage.length > 100) {
+        errorMessage = errorMessage.substring(0, 100) + '...';
+      }
+
       Get.snackbar(
         "Error",
-        "Failed to load dashboard data: $e",
+        "Failed to load dashboard data: $errorMessage",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Get.theme.colorScheme.error,
         colorText: Get.theme.colorScheme.onError,
