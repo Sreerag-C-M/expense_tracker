@@ -1,16 +1,19 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../../core/utils/api_constants.dart';
+import 'package:get/get.dart';
+import '../services/graphql_service.dart';
+import '../queries.dart';
 
 class IncomeProvider {
+  final GraphQLService _gqlService = Get.find<GraphQLService>();
+
   Future<void> createIncome(Map<String, dynamic> data) async {
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/income'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(data),
+    final result = await _gqlService.performMutation(
+      GqlQueries.addIncome,
+      variables: data,
     );
-    if (response.statusCode != 201) {
-      throw Exception('Failed to create income');
+    if (result.hasException) {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to create income',
+      );
     }
   }
 }

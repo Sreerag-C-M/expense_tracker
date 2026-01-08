@@ -1,38 +1,43 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../../core/utils/api_constants.dart';
+import 'package:get/get.dart';
+import '../services/graphql_service.dart';
+import '../queries.dart';
 
 class CategoryProvider {
+  final GraphQLService _gqlService = Get.find<GraphQLService>();
+
   Future<List<dynamic>> getCategories() async {
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/categories'),
-    );
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
+    final result = await _gqlService.performQuery(GqlQueries.getCategories);
+
+    if (!result.hasException && result.data != null) {
+      return result.data!['categories'];
     } else {
-      throw Exception('Failed to load categories');
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to load categories',
+      );
     }
   }
 
   Future<void> createCategory(Map<String, dynamic> data) async {
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/categories'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(data),
+    final result = await _gqlService.performMutation(
+      GqlQueries.addCategory,
+      variables: data,
     );
-    if (response.statusCode != 201) {
-      throw Exception('Failed to create category');
+    if (result.hasException) {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to create category',
+      );
     }
   }
 
   Future<void> deleteCategory(String id) async {
-    final response = await http.delete(
-      Uri.parse('${ApiConstants.baseUrl}/categories/$id'),
+    final result = await _gqlService.performMutation(
+      GqlQueries.deleteCategory,
+      variables: {'id': id},
     );
-    if (response.statusCode != 200) {
-      // Handle "Cannot delete default" error or others
-      final msg = json.decode(response.body)['message'] ?? 'Failed to delete';
-      throw Exception(msg);
+    if (result.hasException) {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to delete category',
+      );
     }
   }
 }

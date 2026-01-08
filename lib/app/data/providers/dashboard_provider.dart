@@ -1,17 +1,19 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../../core/utils/api_constants.dart';
+import 'package:get/get.dart';
+import '../services/graphql_service.dart';
+import '../queries.dart';
 
 class DashboardProvider {
-  Future<Map<String, dynamic>> getDashboardData() async {
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/dashboard'),
-    );
+  final GraphQLService _gqlService = Get.find<GraphQLService>();
 
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
+  Future<Map<String, dynamic>> getDashboardData() async {
+    final result = await _gqlService.performQuery(GqlQueries.getDashboardData);
+
+    if (!result.hasException && result.data != null) {
+      return result.data!['dashboard'];
     } else {
-      throw Exception('Failed to load dashboard data');
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to load dashboard data',
+      );
     }
   }
 }

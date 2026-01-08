@@ -1,47 +1,56 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../../core/utils/api_constants.dart';
+import 'package:get/get.dart';
+import '../services/graphql_service.dart';
+import '../queries.dart';
 
 class ExpenseProvider {
+  final GraphQLService _gqlService = Get.find<GraphQLService>();
+
   Future<List<dynamic>> getExpenses() async {
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/expenses'),
-    );
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
+    final result = await _gqlService.performQuery(GqlQueries.getExpenses);
+
+    if (!result.hasException && result.data != null) {
+      return result.data!['expenses'];
     } else {
-      throw Exception('Failed to load expenses');
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to load expenses',
+      );
     }
   }
 
   Future<void> createExpense(Map<String, dynamic> data) async {
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/expenses'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(data),
+    final result = await _gqlService.performMutation(
+      GqlQueries.addExpense,
+      variables: data,
     );
-    if (response.statusCode != 201) {
-      throw Exception('Failed to create expense');
+    if (result.hasException) {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to create expense',
+      );
     }
   }
 
   Future<void> updateExpense(String id, Map<String, dynamic> data) async {
-    final response = await http.put(
-      Uri.parse('${ApiConstants.baseUrl}/expenses/$id'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(data),
+    final variables = {'id': id, ...data};
+    final result = await _gqlService.performMutation(
+      GqlQueries.updateExpense,
+      variables: variables,
     );
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update expense');
+    if (result.hasException) {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to update expense',
+      );
     }
   }
 
   Future<void> deleteExpense(String id) async {
-    final response = await http.delete(
-      Uri.parse('${ApiConstants.baseUrl}/expenses/$id'),
+    final result = await _gqlService.performMutation(
+      GqlQueries.deleteExpense,
+      variables: {'id': id},
     );
-    if (response.statusCode != 200) {
-      throw Exception('Failed to delete expense');
+    if (result.hasException) {
+      throw Exception(
+        result.exception?.toString() ?? 'Failed to delete expense',
+      );
     }
   }
 }
