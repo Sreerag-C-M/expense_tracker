@@ -84,7 +84,9 @@ class AddIncomeController extends GetxController {
       }
 
       if (Get.isRegistered<DashboardController>()) {
-        Get.find<DashboardController>().fetchDashboardData();
+        await Get.find<DashboardController>().fetchDashboardData(
+          isRefresh: true,
+        );
       }
 
       Get.back(result: true);

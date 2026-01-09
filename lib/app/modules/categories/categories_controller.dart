@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/providers/category_provider.dart';
+import '../dashboard/dashboard_controller.dart';
 
 class CategoriesController extends GetxController {
   final CategoryProvider _provider = CategoryProvider();
@@ -40,6 +41,11 @@ class CategoriesController extends GetxController {
       nameController.clear();
       fetchCategories();
       Get.snackbar('Success', 'Category added');
+      if (Get.isRegistered<DashboardController>()) {
+        await Get.find<DashboardController>().fetchDashboardData(
+          isRefresh: true,
+        );
+      }
     } catch (e) {
       Get.snackbar('Error', 'Failed to add category: $e');
     }
@@ -49,6 +55,11 @@ class CategoriesController extends GetxController {
     try {
       await _provider.deleteCategory(id);
       categories.removeWhere((e) => e['_id'] == id);
+      if (Get.isRegistered<DashboardController>()) {
+        await Get.find<DashboardController>().fetchDashboardData(
+          isRefresh: true,
+        );
+      }
     } catch (e) {
       Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''));
     }

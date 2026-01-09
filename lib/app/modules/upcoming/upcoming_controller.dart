@@ -100,7 +100,9 @@ class UpcomingController extends GetxController {
       fetchPayments(); // Refresh list
 
       if (Get.isRegistered<DashboardController>()) {
-        Get.find<DashboardController>().fetchDashboardData();
+        await Get.find<DashboardController>().fetchDashboardData(
+          isRefresh: true,
+        );
       }
 
       // Reset form
@@ -117,6 +119,11 @@ class UpcomingController extends GetxController {
         (element) => (element['id'] ?? element['_id']) == id,
       );
       Get.snackbar('Deleted', 'Payment removed');
+      if (Get.isRegistered<DashboardController>()) {
+        await Get.find<DashboardController>().fetchDashboardData(
+          isRefresh: true,
+        );
+      }
     } catch (e) {
       Get.snackbar('Error', 'Failed to delete payment');
     }

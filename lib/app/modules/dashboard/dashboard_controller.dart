@@ -34,16 +34,13 @@ class DashboardController extends GetxController {
     }
     isError.value = false;
     try {
-      // 1. Fetch raw data in parallel
-      final results = await Future.wait([
-        _provider.getExpenses(),
-        _provider.getIncomes(),
-        _provider.getUpcomingPayments(),
-      ]);
+      // 1. Fetch data SEQUENTIALLY (not parallel) to avoid overwhelming the connection/server
+      // and to satisfy the user's request for "not parallel".
+      // strictly using networkOnly policy (handled in provider/service default) for fresh data.
 
-      final expenses = results[0] as List<dynamic>;
-      final incomes = results[1] as List<dynamic>;
-      final upcoming = results[2] as List<dynamic>;
+      final expenses = await _provider.getExpenses();
+      final incomes = await _provider.getIncomes();
+      final upcoming = await _provider.getUpcomingPayments();
 
       // 2. Calculate Totals (Client-Side)
       double totalExpenses = 0.0;

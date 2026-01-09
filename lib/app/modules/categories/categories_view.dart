@@ -107,8 +107,12 @@ class CategoriesView extends GetView<CategoriesController> {
                                   Icons.delete_outline,
                                   color: Colors.red,
                                 ),
-                                onPressed: () =>
-                                    controller.deleteCategory(cat['_id']),
+                                onPressed: () {
+                                  final id = cat['_id'] ?? cat['id'];
+                                  if (id != null) {
+                                    controller.deleteCategory(id.toString());
+                                  }
+                                },
                               ),
                       ],
                     ),

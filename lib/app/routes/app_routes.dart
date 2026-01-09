@@ -6,4 +6,6 @@ abstract class Routes {
   static const CATEGORIES = '/categories';
   static const UPCOMING = '/upcoming';
   static const SETTINGS = '/settings';
+  static const EXPENSE_LIST = '/expenses';
+  static const INCOME_LIST = '/incomes';
 }

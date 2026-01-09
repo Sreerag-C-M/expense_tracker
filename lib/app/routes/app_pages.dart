@@ -12,6 +12,10 @@ import '../modules/upcoming/upcoming_view.dart';
 import '../modules/upcoming/upcoming_binding.dart';
 import '../modules/categories/categories_view.dart';
 import '../modules/categories/categories_binding.dart';
+import '../modules/expense/expense_listing_view.dart';
+import '../modules/expense/expense_listing_binding.dart';
+import '../modules/income/income_listing_view.dart';
+import '../modules/income/income_listing_binding.dart';
 
 class AppPages {
   static const INITIAL = Routes.SPLASH;
@@ -46,6 +50,16 @@ class AppPages {
       name: Routes.CATEGORIES,
       page: () => const CategoriesView(),
       binding: CategoriesBinding(),
+    ),
+    GetPage(
+      name: Routes.EXPENSE_LIST,
+      page: () => const ExpenseListingView(),
+      binding: ExpenseListingBinding(),
+    ),
+    GetPage(
+      name: Routes.INCOME_LIST,
+      page: () => const IncomeListingView(),
+      binding: IncomeListingBinding(),
     ),
   ];
 }

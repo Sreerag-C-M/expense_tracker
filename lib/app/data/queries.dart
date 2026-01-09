@@ -152,4 +152,11 @@ class GqlQueries {
       }
     }
   ''';
+  static const String deleteIncome = r'''
+    mutation DeleteIncome($id: ID!) {
+      deleteIncome(id: $id) {
+        id
+      }
+    }
+  ''';
 }

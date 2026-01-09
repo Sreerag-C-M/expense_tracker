@@ -305,7 +305,7 @@ class DashboardView extends GetView<DashboardController> {
           "Expense",
           Colors.orange,
           () => Get.toNamed(
-            Routes.ADD_EXPENSE,
+            Routes.EXPENSE_LIST,
           )?.then((_) => controller.fetchDashboardData(isRefresh: true)),
         ),
         _buildActionButton(
@@ -314,7 +314,7 @@ class DashboardView extends GetView<DashboardController> {
           "Income",
           Colors.green,
           () => Get.toNamed(
-            Routes.ADD_INCOME,
+            Routes.INCOME_LIST,
           )?.then((_) => controller.fetchDashboardData(isRefresh: true)),
         ),
         _buildActionButton(

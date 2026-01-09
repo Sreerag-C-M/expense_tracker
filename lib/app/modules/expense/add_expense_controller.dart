@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/providers/expense_provider.dart';
+import '../../data/providers/category_provider.dart';
 import '../dashboard/dashboard_controller.dart';
 
 class AddExpenseController extends GetxController {
   final ExpenseProvider _provider = ExpenseProvider();
+  final CategoryProvider _categoryProvider = CategoryProvider();
 
   final formKey = GlobalKey<FormState>();
   final amountController = TextEditingController();
@@ -17,7 +19,7 @@ class AddExpenseController extends GetxController {
   final isRecurring = false.obs;
   final recurrenceType = 'monthly'.obs;
 
-  final List<String> defaultCategories = [
+  final defaultCategories = <String>[
     'Food',
     'Transport',
     'Rent',
@@ -26,9 +28,10 @@ class AddExpenseController extends GetxController {
     'Entertainment',
     'Health',
     'Others',
-  ];
+  ].obs;
 
   final isLoading = false.obs;
+  final Rx<String?> editId = Rx<String?>(null);
 
   void pickDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -42,23 +45,60 @@ class AddExpenseController extends GetxController {
     }
   }
 
-  final Rx<String?> editId = Rx<String?>(null);
-
   @override
   void onInit() {
     super.onInit();
+    _loadCategories();
+
     final args = Get.arguments;
     if (args != null && args is Map<String, dynamic>) {
       editId.value = args['_id'] ?? args['id'];
       amountController.text = args['amount'].toString();
       descriptionController.text = args['description'] ?? '';
 
-      // Category
+      // We will set category after loading, or temp set it here
+      // But simpler to just check containment later.
+      // For now, let's delay setting selectedCategory checks until categories are loaded if possible,
+      // but simplistic approach:
+
+      final categoryArg = args['category'];
+      // We'll optimistically set it, and if it's not in the list later we can add it or handle it.
+      if (categoryArg != null) {
+        selectedCategory.value = categoryArg;
+        if (!defaultCategories.contains(categoryArg)) {
+          // Use "Others" logic or add to list?
+          // Current logic uses "Others" + Custom text.
+          // If it's a known custom category, we might want to just show it.
+          // For now, let's keep existing logic:
+          if (!defaultCategories.contains(categoryArg)) {
+            if ([
+              'Food',
+              'Transport',
+              'Rent',
+              'Shopping',
+              'Bills',
+              'Entertainment',
+              'Health',
+            ].contains(categoryArg)) {
+              // It's a default one
+            } else {
+              // It's likely a custom one or one from the DB
+              // We will wait for DB categories to load.
+            }
+          }
+        }
+      }
+
+      // ... (Rest of args parsing)
+      // Category Logic refined:
       if (defaultCategories.contains(args['category'])) {
         selectedCategory.value = args['category'];
       } else {
-        selectedCategory.value = 'Others';
-        customCategoryController.text = args['category'] ?? '';
+        // It might be in the fetched list later, so we just set it.
+        // If it's absolutely not found, user might see it selected or "Others"
+        selectedCategory.value = args['category'];
+        // Note: Logic for "Others" + Custom Field might need adjustment if we want to support fully dynamic categories.
+        // If we move to fully dynamic, "Others" + Custom Field is less needed, but let's keep it for fallback.
       }
 
       // Date
@@ -75,6 +115,46 @@ class AddExpenseController extends GetxController {
       paymentType.value = args['paymentType'] ?? 'cash';
       isRecurring.value = args['isRecurring'] ?? false;
       recurrenceType.value = args['recurrenceType'] ?? 'monthly';
+    }
+  }
+
+  void _loadCategories() async {
+    try {
+      final cats = await _categoryProvider.getCategories();
+      final names = cats.map((e) => e['name'].toString()).toList();
+
+      // Merge with hardcoded defaults if you want, or replace them.
+      // User said "category is like a useless field", implies they want to use the ones they created.
+      // So let's prioritize the DB categories.
+
+      final Set<String> allCats = {};
+      // specific hardcoded defaults to keep
+      allCats.addAll([
+        'Food',
+        'Transport',
+        'Rent',
+        'Shopping',
+        'Bills',
+        'Entertainment',
+        'Health',
+        'Others',
+      ]);
+      allCats.addAll(names);
+
+      defaultCategories.assignAll(allCats.toList());
+
+      // Ensure selected category is valid
+      if (!defaultCategories.contains(selectedCategory.value)) {
+        if (selectedCategory.value != 'Others' &&
+            selectedCategory.value.isNotEmpty) {
+          // It was a custom one not in list? Add it temp?
+          defaultCategories.add(selectedCategory.value);
+        } else {
+          selectedCategory.value = defaultCategories.first;
+        }
+      }
+    } catch (e) {
+      print("Error loading categories: $e");
     }
   }
 
@@ -119,7 +199,9 @@ class AddExpenseController extends GetxController {
 
       // Refresh Dashboard
       if (Get.isRegistered<DashboardController>()) {
-        Get.find<DashboardController>().fetchDashboardData();
+        await Get.find<DashboardController>().fetchDashboardData(
+          isRefresh: true,
+        );
         // Trigger onReady or explicit fetch if needed, but fetchDashboardData calls getExpenses too now
       }
 
