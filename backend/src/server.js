@@ -19,10 +19,33 @@ app.get('/', (req, res) => {
     res.send('Expense Tracker API is running. Go to /graphql to use the API.');
 });
 
-app.use('/graphql', graphqlHTTP({
+const jwt = require('jsonwebtoken');
+
+// Auth Middleware
+const auth = async (req, res, next) => {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+            req.user = { id: decoded.id };
+        } catch (error) {
+            console.error(error);
+        }
+    }
+    next();
+};
+
+app.use(auth);
+
+app.use('/graphql', graphqlHTTP((req) => ({
     schema,
-    graphiql: true
-}));
+    graphiql: true,
+    context: {
+        user: req.user
+    }
+})));
 
 // Routes
 app.use('/api', apiRoutes);

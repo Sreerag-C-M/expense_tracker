@@ -8,4 +8,6 @@ abstract class Routes {
   static const SETTINGS = '/settings';
   static const EXPENSE_LIST = '/expenses';
   static const INCOME_LIST = '/incomes';
+  static const LOGIN = '/login';
+  static const SIGNUP = '/signup';
 }

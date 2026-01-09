@@ -13,6 +13,10 @@ const Expense = require('../models/Expense');
 const Income = require('../models/Income');
 const Category = require('../models/Category');
 const UpcomingPayment = require('../models/UpcomingPayment');
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 // Expense Type
 const ExpenseType = new GraphQLObjectType({
@@ -72,6 +76,26 @@ const UpcomingPaymentType = new GraphQLObjectType({
     })
 });
 
+// User Type
+const UserType = new GraphQLObjectType({
+    name: 'User',
+    fields: () => ({
+        id: { type: GraphQLID },
+        name: { type: GraphQLString },
+        email: { type: GraphQLString },
+        createdAt: { type: GraphQLString }
+    })
+});
+
+// Auth Token Type
+const AuthTokenType = new GraphQLObjectType({
+    name: 'AuthToken',
+    fields: () => ({
+        token: { type: GraphQLString },
+        user: { type: UserType }
+    })
+});
+
 // Dashboard Types
 const CategoryAggregateType = new GraphQLObjectType({
     name: 'CategoryAggregate',
@@ -115,7 +139,10 @@ const RootQuery = new GraphQLObjectType({
         // Dashboard
         dashboard: {
             type: DashboardType,
-            async resolve(parent, args) {
+            async resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                const userObjectId = new mongoose.Types.ObjectId(context.user.id);
+
                 const today = new Date();
                 const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
                 const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -123,19 +150,27 @@ const RootQuery = new GraphQLObjectType({
                 const totalDaysInMonth = endOfMonth.getDate();
 
                 // 1. Current Balance
-                const allExpenses = await Expense.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]);
-                const allIncome = await Income.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]);
+                const allExpenses = await Expense.aggregate([
+                    { $match: { user: userObjectId } },
+                    { $group: { _id: null, total: { $sum: '$amount' } } }
+                ]);
+                const allIncome = await Income.aggregate([
+                    { $match: { user: userObjectId } },
+                    { $group: { _id: null, total: { $sum: '$amount' } } }
+                ]);
                 const totalExpensesAmount = allExpenses.length > 0 ? allExpenses[0].total : 0;
                 const totalIncomeAmount = allIncome.length > 0 ? allIncome[0].total : 0;
                 const currentBalance = totalIncomeAmount - totalExpensesAmount;
 
                 // 2. This Month Data
                 const thisMonthExpensesAgg = await Expense.aggregate([
+                    { $match: { user: userObjectId } },
                     { $addFields: { convertedDate: { $toDate: "$date" } } },
                     { $match: { convertedDate: { $gte: startOfMonth, $lte: endOfMonth } } },
                     { $group: { _id: null, total: { $sum: '$amount' } } }
                 ]);
                 const thisMonthIncomeAgg = await Income.aggregate([
+                    { $match: { user: userObjectId } },
                     { $addFields: { convertedDate: { $toDate: "$date" } } },
                     { $match: { convertedDate: { $gte: startOfMonth, $lte: endOfMonth } } },
                     { $group: { _id: null, total: { $sum: '$amount' } } }
@@ -144,7 +179,7 @@ const RootQuery = new GraphQLObjectType({
                 const thisMonthIncome = thisMonthIncomeAgg.length > 0 ? thisMonthIncomeAgg[0].total : 0;
 
                 // 3. Upcoming Payments
-                const upcomingPayments = await UpcomingPayment.find();
+                const upcomingPayments = await UpcomingPayment.find({ user: context.user.id });
                 let upcomingTotal = 0;
                 upcomingPayments.forEach(payment => {
                     upcomingTotal += payment.amount;
@@ -159,6 +194,7 @@ const RootQuery = new GraphQLObjectType({
 
                 // 5. Category-wise expense chart
                 const categoryExpenses = await Expense.aggregate([
+                    { $match: { user: userObjectId } },
                     { $addFields: { convertedDate: { $toDate: "$date" } } },
                     { $match: { convertedDate: { $gte: startOfMonth, $lte: endOfMonth } } },
                     { $group: { _id: '$category', total: { $sum: '$amount' } } },
@@ -171,6 +207,7 @@ const RootQuery = new GraphQLObjectType({
                 sixMonthsAgo.setDate(1);
 
                 const monthlyTrend = await Expense.aggregate([
+                    { $match: { user: userObjectId } },
                     { $addFields: { convertedDate: { $toDate: "$date" } } },
                     { $match: { convertedDate: { $gte: sixMonthsAgo } } },
                     {
@@ -204,57 +241,65 @@ const RootQuery = new GraphQLObjectType({
         // Expenses
         expenses: {
             type: new GraphQLList(ExpenseType),
-            resolve(parent, args) {
-                return Expense.find();
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Expense.find({ user: context.user.id });
             }
         },
         expense: {
             type: ExpenseType,
             args: { id: { type: GraphQLID } },
-            resolve(parent, args) {
-                return Expense.findById(args.id);
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Expense.findOne({ _id: args.id, user: context.user.id });
             }
         },
         // Incomes
         incomes: {
             type: new GraphQLList(IncomeType),
-            resolve(parent, args) {
-                return Income.find();
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Income.find({ user: context.user.id });
             }
         },
         income: {
             type: IncomeType,
             args: { id: { type: GraphQLID } },
-            resolve(parent, args) {
-                return Income.findById(args.id);
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Income.findOne({ _id: args.id, user: context.user.id });
             }
         },
         // Categories
         categories: {
             type: new GraphQLList(CategoryType),
-            resolve(parent, args) {
-                return Category.find();
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Category.find({ user: context.user.id });
             }
         },
         category: {
             type: CategoryType,
             args: { id: { type: GraphQLID } },
-            resolve(parent, args) {
-                return Category.findById(args.id);
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Category.findOne({ _id: args.id, user: context.user.id });
             }
         },
         // Upcoming Payments
         upcomingPayments: {
             type: new GraphQLList(UpcomingPaymentType),
-            resolve(parent, args) {
-                return UpcomingPayment.find();
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return UpcomingPayment.find({ user: context.user.id });
             }
         },
         upcomingPayment: {
             type: UpcomingPaymentType,
             args: { id: { type: GraphQLID } },
-            resolve(parent, args) {
-                return UpcomingPayment.findById(args.id);
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return UpcomingPayment.findOne({ _id: args.id, user: context.user.id });
             }
         }
     }
@@ -264,6 +309,41 @@ const RootQuery = new GraphQLObjectType({
 const Mutation = new GraphQLObjectType({
     name: 'Mutation',
     fields: {
+        // Auth Mutations
+        signup: {
+            type: AuthTokenType,
+            args: {
+                name: { type: new GraphQLNonNull(GraphQLString) },
+                email: { type: new GraphQLNonNull(GraphQLString) },
+                password: { type: new GraphQLNonNull(GraphQLString) }
+            },
+            async resolve(parent, args) {
+                const { name, email, password } = args;
+                const user = await User.create({ name, email, password });
+                const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '30d' });
+                return { token, user };
+            }
+        },
+        login: {
+            type: AuthTokenType,
+            args: {
+                email: { type: new GraphQLNonNull(GraphQLString) },
+                password: { type: new GraphQLNonNull(GraphQLString) }
+            },
+            async resolve(parent, args) {
+                const { email, password } = args;
+                const user = await User.findOne({ email }).select('+password');
+                if (!user) {
+                    throw new Error('Invalid credentials');
+                }
+                const isMatch = await user.matchPassword(password);
+                if (!isMatch) {
+                    throw new Error('Invalid credentials');
+                }
+                const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '30d' });
+                return { token, user };
+            }
+        },
         // Expense Mutations
         addExpense: {
             type: ExpenseType,
@@ -276,8 +356,10 @@ const Mutation = new GraphQLObjectType({
                 isRecurring: { type: GraphQLBoolean },
                 recurrenceType: { type: GraphQLString }
             },
-            resolve(parent, args) {
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
                 const expense = new Expense({
+                    user: context.user.id,
                     amount: args.amount,
                     category: args.category,
                     description: args.description,
@@ -292,8 +374,9 @@ const Mutation = new GraphQLObjectType({
         deleteExpense: {
             type: ExpenseType,
             args: { id: { type: new GraphQLNonNull(GraphQLID) } },
-            resolve(parent, args) {
-                return Expense.findByIdAndDelete(args.id);
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Expense.findOneAndDelete({ _id: args.id, user: context.user.id });
             }
         },
         updateExpense: {
@@ -308,9 +391,10 @@ const Mutation = new GraphQLObjectType({
                 isRecurring: { type: GraphQLBoolean },
                 recurrenceType: { type: GraphQLString }
             },
-            resolve(parent, args) {
-                return Expense.findByIdAndUpdate(
-                    args.id,
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Expense.findOneAndUpdate(
+                    { _id: args.id, user: context.user.id },
                     {
                         $set: {
                             amount: args.amount,
@@ -335,8 +419,10 @@ const Mutation = new GraphQLObjectType({
                 date: { type: GraphQLString },
                 isRecurring: { type: GraphQLBoolean }
             },
-            resolve(parent, args) {
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
                 const income = new Income({
+                    user: context.user.id,
                     amount: args.amount,
                     source: args.source,
                     date: args.date,
@@ -348,8 +434,9 @@ const Mutation = new GraphQLObjectType({
         deleteIncome: {
             type: IncomeType,
             args: { id: { type: new GraphQLNonNull(GraphQLID) } },
-            resolve(parent, args) {
-                return Income.findByIdAndDelete(args.id);
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Income.findOneAndDelete({ _id: args.id, user: context.user.id });
             }
         },
         updateIncome: {
@@ -361,9 +448,10 @@ const Mutation = new GraphQLObjectType({
                 date: { type: GraphQLString },
                 isRecurring: { type: GraphQLBoolean }
             },
-            resolve(parent, args) {
-                return Income.findByIdAndUpdate(
-                    args.id,
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Income.findOneAndUpdate(
+                    { _id: args.id, user: context.user.id },
                     {
                         $set: {
                             amount: args.amount,
@@ -384,8 +472,10 @@ const Mutation = new GraphQLObjectType({
                 type: { type: GraphQLString },
                 isDefault: { type: GraphQLBoolean }
             },
-            resolve(parent, args) {
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
                 const category = new Category({
+                    user: context.user.id,
                     name: args.name,
                     type: args.type,
                     isDefault: args.isDefault
@@ -396,8 +486,9 @@ const Mutation = new GraphQLObjectType({
         deleteCategory: {
             type: CategoryType,
             args: { id: { type: new GraphQLNonNull(GraphQLID) } },
-            resolve(parent, args) {
-                return Category.findByIdAndDelete(args.id);
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return Category.findOneAndDelete({ _id: args.id, user: context.user.id });
             }
         },
         // Upcoming Payment Mutations
@@ -409,8 +500,10 @@ const Mutation = new GraphQLObjectType({
                 dueDate: { type: new GraphQLNonNull(GraphQLString) },
                 frequency: { type: new GraphQLNonNull(GraphQLString) }
             },
-            resolve(parent, args) {
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
                 const upcomingPayment = new UpcomingPayment({
+                    user: context.user.id,
                     title: args.title,
                     amount: args.amount,
                     dueDate: args.dueDate,
@@ -422,8 +515,9 @@ const Mutation = new GraphQLObjectType({
         deleteUpcomingPayment: {
             type: UpcomingPaymentType,
             args: { id: { type: new GraphQLNonNull(GraphQLID) } },
-            resolve(parent, args) {
-                return UpcomingPayment.findByIdAndDelete(args.id);
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return UpcomingPayment.findOneAndDelete({ _id: args.id, user: context.user.id });
             }
         },
         updateUpcomingPayment: {
@@ -435,9 +529,10 @@ const Mutation = new GraphQLObjectType({
                 dueDate: { type: GraphQLString },
                 frequency: { type: GraphQLString }
             },
-            resolve(parent, args) {
-                return UpcomingPayment.findByIdAndUpdate(
-                    args.id,
+            resolve(parent, args, context) {
+                if (!context.user) throw new Error('Not authorized');
+                return UpcomingPayment.findOneAndUpdate(
+                    { _id: args.id, user: context.user.id },
                     {
                         $set: {
                             title: args.title,

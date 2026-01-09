@@ -159,4 +159,29 @@ class GqlQueries {
       }
     }
   ''';
+  static const String login = r'''
+    mutation Login($email: String!, $password: String!) {
+      login(email: $email, password: $password) {
+        token
+        user {
+          id
+          name
+          email
+        }
+      }
+    }
+  ''';
+
+  static const String signup = r'''
+    mutation Signup($name: String!, $email: String!, $password: String!) {
+      signup(name: $name, email: $email, password: $password) {
+        token
+        user {
+          id
+          name
+          email
+        }
+      }
+    }
+  ''';
 }

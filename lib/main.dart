@@ -4,7 +4,10 @@ import 'app/routes/app_pages.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/data/services/graphql_service.dart';
 
-void main() {
+import 'package:get_storage/get_storage.dart';
+
+void main() async {
+  await GetStorage.init();
   Get.put(GraphQLService());
   runApp(
     GetMaterialApp(

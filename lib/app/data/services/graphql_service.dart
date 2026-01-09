@@ -3,6 +3,8 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../../core/utils/api_constants.dart';
 
+import 'package:get_storage/get_storage.dart';
+
 class GraphQLService extends GetxService {
   late GraphQLClient client;
 
@@ -14,8 +16,18 @@ class GraphQLService extends GetxService {
       httpClient: TimeoutClient(timeout: const Duration(seconds: 30)),
     );
 
+    final AuthLink authLink = AuthLink(
+      getToken: () async {
+        final box = GetStorage();
+        final token = box.read('token');
+        return token != null ? 'Bearer $token' : null;
+      },
+    );
+
+    final Link link = authLink.concat(httpLink);
+
     client = GraphQLClient(
-      link: httpLink,
+      link: link,
       // The default store is the InMemoryStore, which does NOT persist to disk
       cache: GraphQLCache(),
     );

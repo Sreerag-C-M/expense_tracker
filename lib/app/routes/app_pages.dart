@@ -17,6 +17,10 @@ import '../modules/expense/expense_listing_binding.dart';
 import '../modules/income/income_listing_view.dart';
 import '../modules/income/income_listing_binding.dart';
 
+import '../modules/auth/login_view.dart';
+import '../modules/auth/signup_view.dart';
+import '../modules/auth/auth_binding.dart';
+
 class AppPages {
   static const INITIAL = Routes.SPLASH;
 
@@ -25,6 +29,16 @@ class AppPages {
       name: Routes.SPLASH,
       page: () => const SplashView(),
       binding: SplashBinding(),
+    ),
+    GetPage(
+      name: Routes.LOGIN,
+      page: () => const LoginView(),
+      binding: AuthBinding(),
+    ),
+    GetPage(
+      name: Routes.SIGNUP,
+      page: () => const SignupView(),
+      binding: AuthBinding(),
     ),
     GetPage(
       name: Routes.DASHBOARD,

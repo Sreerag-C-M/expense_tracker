@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const expenseSchema = mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     amount: { type: Number, required: true },
     category: { type: String, required: false }, // Can be custom
     description: { type: String, required: true },
