@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../../data/providers/dashboard_provider.dart';
+import 'package:get_storage/get_storage.dart';
+import '../../routes/app_routes.dart';
 
 class DashboardController extends GetxController {
   final isLoading = true.obs;
@@ -199,5 +201,11 @@ class DashboardController extends GetxController {
         colorText: Get.theme.colorScheme.onError,
       );
     }
+  }
+
+  Future<void> logout() async {
+    final box = GetStorage();
+    await box.remove('token');
+    Get.offAllNamed(Routes.LOGIN);
   }
 }

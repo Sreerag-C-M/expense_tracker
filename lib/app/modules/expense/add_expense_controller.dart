@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../data/providers/expense_provider.dart';
 import '../../data/providers/category_provider.dart';
 import '../dashboard/dashboard_controller.dart';
+import '../../routes/app_routes.dart';
 
 class AddExpenseController extends GetxController {
   final ExpenseProvider _provider = ExpenseProvider();
@@ -181,31 +182,37 @@ class AddExpenseController extends GetxController {
 
       if (editId.value != null) {
         await _provider.updateExpense(editId.value!, expenseData);
+
+        if (Get.isRegistered<DashboardController>()) {
+          await Get.find<DashboardController>().fetchDashboardData(
+            isRefresh: true,
+          );
+        }
+
         Get.snackbar(
           'Success',
           'Expense updated successfully',
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
+        Get.back(result: true);
       } else {
         await _provider.createExpense(expenseData);
+
+        if (Get.isRegistered<DashboardController>()) {
+          await Get.find<DashboardController>().fetchDashboardData(
+            isRefresh: true,
+          );
+        }
+
         Get.snackbar(
           'Success',
           'Expense added successfully',
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
+        Get.offNamed(Routes.EXPENSE_LIST);
       }
-
-      // Refresh Dashboard
-      if (Get.isRegistered<DashboardController>()) {
-        await Get.find<DashboardController>().fetchDashboardData(
-          isRefresh: true,
-        );
-        // Trigger onReady or explicit fetch if needed, but fetchDashboardData calls getExpenses too now
-      }
-
-      Get.back(result: true);
     } catch (e) {
       Get.snackbar(
         'Error',

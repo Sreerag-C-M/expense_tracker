@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/providers/income_provider.dart';
 import '../dashboard/dashboard_controller.dart';
+import '../../routes/app_routes.dart';
 
 class AddIncomeController extends GetxController {
   final IncomeProvider _provider = IncomeProvider();
@@ -67,29 +68,37 @@ class AddIncomeController extends GetxController {
 
       if (editId.value != null) {
         await _provider.updateIncome(editId.value!, data);
+
+        if (Get.isRegistered<DashboardController>()) {
+          await Get.find<DashboardController>().fetchDashboardData(
+            isRefresh: true,
+          );
+        }
+
         Get.snackbar(
           'Success',
           'Income updated successfully',
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
+        Get.back(result: true);
       } else {
         await _provider.createIncome(data);
+
+        if (Get.isRegistered<DashboardController>()) {
+          await Get.find<DashboardController>().fetchDashboardData(
+            isRefresh: true,
+          );
+        }
+
         Get.snackbar(
           'Success',
           'Income added successfully',
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
+        Get.offNamed(Routes.INCOME_LIST);
       }
-
-      if (Get.isRegistered<DashboardController>()) {
-        await Get.find<DashboardController>().fetchDashboardData(
-          isRefresh: true,
-        );
-      }
-
-      Get.back(result: true);
     } catch (e) {
       Get.snackbar(
         'Error',
